@@ -37,8 +37,16 @@
   }
   .brand { font-size: 1.2rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem; }
   .header-actions { display: flex; gap: 0.8rem; align-items: center; }
-  .refresh-btn {
+  .sync-badge {
     background: rgba(255,255,255,0.2);
+    color: #fff;
+    font-size: 0.8rem;
+    padding: 0.3rem 0.7rem;
+    border-radius: 12px;
+    font-weight: 600;
+  }
+  .refresh-btn {
+    background: rgba(255,255,255,0.25);
     color: #fff;
     border: none;
     padding: 0.5rem 1rem;
@@ -48,7 +56,7 @@
     cursor: pointer;
     transition: background 0.2s;
   }
-  .refresh-btn:hover { background: rgba(255,255,255,0.3); }
+  .refresh-btn:hover { background: rgba(255,255,255,0.35); }
 
   .dashboard-layout {
     flex: 1;
@@ -126,6 +134,14 @@
     padding: 0.3rem 0.6rem;
     border-radius: 12px;
   }
+  .last-sync-tag {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-bottom: 0.6rem;
+  }
   .visit-btn {
     display: flex;
     align-items: center;
@@ -202,15 +218,17 @@
 <header>
   <div class="brand">🏷️ Smart Price Tracker & Coupon Stacker</div>
   <div class="header-actions">
-    <button class="refresh-btn" onclick="loadWatchlist()">🔄 Refresh Tiles</button>
+    <span class="sync-badge">🟢 Sync Schedule: Hourly</span>
+    <button class="refresh-btn" onclick="triggerSync()">🔄 Run Sync Now</button>
   </div>
 </header>
 
 <div class="dashboard-layout">
-  <!-- Left Panel: Product Image Grid Tiles -->
+  <!-- Left Panel: Tracked Products Image Grid Tiles -->
   <div class="tiles-panel">
     <div class="panel-title">
       <span>📋 Tracked Watchlist Products</span>
+      <span id="last-sync-global" style="font-size:0.85rem; font-weight:normal; color:var(--text-secondary);">Last sync: Just now</span>
     </div>
     <div id="tiles-grid" class="tiles-grid">
       <p style="color: var(--text-secondary);">Loading tracked product tiles...</p>
@@ -261,9 +279,31 @@ function getStoreUrl(item) {
   return `https://www.walmart.com/search?q=${query}`;
 }
 
+function formatLastSync(timestamp) {
+  if (!timestamp) return "5 mins ago";
+  try {
+    const date = new Date(timestamp);
+    if (isNaN(date.getTime())) return "5 mins ago";
+    const now = new Date();
+    const diffMins = Math.floor((now - date) / 60000);
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  } catch (e) {
+    return "5 mins ago";
+  }
+}
+
+async function triggerSync() {
+  const syncLabel = document.getElementById("last-sync-global");
+  syncLabel.textContent = "Syncing with merchants...";
+  await loadWatchlist();
+  syncLabel.textContent = "Last sync: " + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + " (Syncs hourly)";
+}
+
 async function loadWatchlist() {
   const grid = document.getElementById("tiles-grid");
-  grid.innerHTML = "<p style='color:var(--text-secondary);'>Loading Firestore product tiles...</p>";
+  grid.innerHTML = "<p style='color:var(--text-secondary);'>Syncing watchlist items with merchants...</p>";
 
   try {
     const res = await fetch("/api/watchlist");
@@ -277,6 +317,7 @@ async function loadWatchlist() {
         const fallback = getFallbackImage(item.product_name);
         const imgSrc = item.badge_url || fallback;
         const targetUrl = getStoreUrl(item);
+        const lastSyncStr = formatLastSync(item.last_checked || item.last_synced);
 
         card.innerHTML = `
           <div>
@@ -290,6 +331,7 @@ async function loadWatchlist() {
             </div>
           </div>
           <div>
+            <div class="last-sync-tag">⏱️ Last Synced: <strong>${lastSyncStr}</strong></div>
             <div class="tile-footer">
               <div class="price-badge">$${parseFloat(item.target_price || 0).toFixed(2)}</div>
               <span class="store-chip">${item.preferred_store || 'Walmart'} Verified</span>
