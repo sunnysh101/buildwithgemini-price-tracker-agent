@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Price Tracker & Coupon Stacker</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined">
+<style>
+  :root {
+    --accent: #1a73e8;
+    --accent-dark: #1557b0;
+    --bg: #f8f9fa;
+    --card-bg: #ffffff;
+    --border: #e0e0e0;
+    --text-primary: #202124;
+    --text-secondary: #5f6368;
+    --success: #1e8e3e;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text-primary);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+  header {
+    background: #1a73e8;
+    color: #fff;
+    padding: 0.8rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  .brand { font-size: 1.15rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem; }
+  .nav-tabs { display: flex; gap: 0.5rem; }
+  .tab-btn {
+    background: rgba(255,255,255,0.15);
+    color: #fff;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .tab-btn:hover { background: rgba(255,255,255,0.25); }
+  .tab-btn.active { background: #ffffff; color: var(--accent); }
+
+  .view-container { flex: 1; overflow-y: auto; position: relative; }
+  .view { display: none; height: 100%; }
+  .view.active { display: flex; flex-direction: column; }
+
+  /* Chat View */
+  #chat-view { height: 100%; display: flex; flex-direction: column; }
+  #log { flex: 1; overflow-y: auto; padding: 1.2rem; max-width: 820px; width: 100%; margin: 0 auto; }
+  .msg { margin: 0.8rem 0; }
+  .msg.user { text-align: right; }
+  .bubble {
+    display: inline-block;
+    padding: 0.75rem 1rem;
+    border-radius: 12px;
+    background: #fff;
+    border: 1px solid var(--border);
+    text-align: left;
+    max-width: 85%;
+    white-space: pre-wrap;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  }
+  .msg.user .bubble { background: var(--accent); color: #fff; border: none; }
+  .bubble.rich { background: transparent; border: none; padding: 0; max-width: 100%; white-space: normal; }
+
+  form { display: flex; gap: 0.5rem; padding: 1rem; border-top: 1px solid var(--border); background: #fff; max-width: 820px; width: 100%; margin: 0 auto; }
+  input { flex: 1; padding: 0.75rem 1rem; border: 1px solid var(--border); border-radius: 24px; font-size: 1rem; outline: none; }
+  input:focus { border-color: var(--accent); }
+  button.send-btn { padding: 0.75rem 1.5rem; border: none; border-radius: 24px; background: var(--accent); color: #fff; font-weight: 600; cursor: pointer; }
+  button.send-btn:hover { background: var(--accent-dark); }
+
+  /* Watchlist Grid View */
+  #watchlist-view { padding: 1.5rem; max-width: 1000px; width: 100%; margin: 0 auto; }
+  .watchlist-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.2rem; }
+  .watchlist-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.2rem;
+  }
+  .product-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.2rem;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .product-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+  .product-badge-img { width: 100%; height: 160px; object-fit: contain; background: #f1f3f4; border-radius: 8px; margin-bottom: 0.8rem; }
+  .product-title { font-weight: 700; font-size: 1.1rem; margin-bottom: 0.4rem; }
+  .product-meta { font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.8rem; line-height: 1.4; }
+  .price-tag { font-size: 1.25rem; font-weight: 800; color: var(--success); margin-bottom: 0.4rem; }
+  .store-chip { display: inline-block; background: #e8f0fe; color: #1967d2; font-size: 0.8rem; font-weight: 600; padding: 0.25rem 0.6rem; border-radius: 12px; }
+
+  /* A2UI Component Styles */
+  .a2card { border: 1px solid var(--border); border-radius: 12px; padding: 1rem; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.06); max-width: 100%; }
+  .a2card + .a2card, .a2col > .a2card { margin-top: 0.6rem; }
+  .a2col { display: flex; flex-direction: column; gap: 0.4rem; }
+  .a2row { display: flex; flex-direction: row; gap: 0.6rem; align-items: center; flex-wrap: wrap; }
+  .a2row.between { justify-content: space-between; }
+  .a2text { margin: 0; line-height: 1.4; }
+  .a2text.a2-h1 { font-size: 1.4rem; font-weight: 700; }
+  .a2text.a2-h2 { font-size: 1.2rem; font-weight: 700; }
+  .a2text.a2-h3 { font-size: 1.05rem; font-weight: 600; }
+  .a2text.a2-caption { font-size: 0.85rem; color: var(--text-secondary); }
+  .a2divider { border: none; border-top: 1px solid var(--border); margin: 0.4rem 0; width: 100%; }
+  .a2img { max-width: 100%; border-radius: 8px; display: block; }
+  .material-symbols-outlined { font-size: 1.25rem; line-height: 1; vertical-align: middle; color: var(--accent); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">🏷️ Price Tracker Assistant</div>
+  <div class="nav-tabs">
+    <button class="tab-btn active" onclick="switchTab('chat')">💬 AI Assistant</button>
+    <button class="tab-btn" onclick="switchTab('watchlist')">📋 My Watchlist</button>
+  </div>
+</header>
+
+<div class="view-container">
+  <!-- Chat View -->
+  <div id="chat-view" class="view active">
+    <div id="log"></div>
+    <form id="form">
+      <input id="input" placeholder="Ask for deals, search live prices, or add items to watchlist..." autocomplete="off" autofocus>
+      <button class="send-btn">Send</button>
+    </form>
+  </div>
+
+  <!-- Watchlist View -->
+  <div id="watchlist-view" class="view">
+    <div class="watchlist-header">
+      <h2>📋 Tracked Items Watchlist</h2>
+      <button class="tab-btn active" style="background: var(--accent);" onclick="loadWatchlist()">🔄 Refresh List</button>
+    </div>
+    <div id="watchlist-grid" class="watchlist-grid">
+      <p style="color: var(--text-secondary);">Loading tracked products...</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const log = document.getElementById("log");
+const form = document.getElementById("form");
+const input = document.getElementById("input");
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(v => classListHelper(v, 'remove', 'active'));
+
+  if (tab === 'chat') {
+    document.querySelectorAll('.tab-btn')[0].classList.add('active');
+    document.getElementById('chat-view').classList.add('active');
+  } else {
+    document.querySelectorAll('.tab-btn')[1].classList.add('active');
+    document.getElementById('watchlist-view').classList.add('active');
+    loadWatchlist();
+  }
+}
+
+function classListHelper(el, action, cls) {
+  if (action === 'add') el.classList.add(cls);
+  else el.classList.remove(cls);
+}
+
+async function loadWatchlist() {
+  const grid = document.getElementById("watchlist-grid");
+  grid.innerHTML = "<p>Loading items from Firestore...</p>";
+
+  try {
+    const res = await fetch("/api/watchlist");
+    const data = await res.json();
+    if (data.status === "success" && data.watchlist && data.watchlist.length > 0) {
+      grid.innerHTML = "";
+      data.watchlist.forEach(item => {
+        const card = document.createElement("div");
+        card.className = "product-card";
+
+        const badgeUrl = item.badge_url || "https://storage.googleapis.com/price-tracker-assets-qwiklabs-gcp-03-395857593a33/badge_placeholder.png";
+
+        card.innerHTML = `
+          <div>
+            <img class="product-badge-img" src="${badgeUrl}" alt="${item.product_name}" onerror="this.src='https://storage.googleapis.com/price-tracker-assets-qwiklabs-gcp-03-395857593a33/badge_placeholder.png'">
+            <div class="product-title">${item.product_name}</div>
+            <div class="product-meta">
+              Store: <strong>${item.preferred_store || 'Walmart'}</strong><br>
+              Min Trust Score: ⭐️ ${item.min_trust_score || 4.0}/5.0<br>
+              Status: <span style="color:var(--success); font-weight:600;">In Stock</span>
+            </div>
+          </div>
+          <div>
+            <div class="price-tag">Target: $${parseFloat(item.target_price || 0).toFixed(2)}</div>
+            <span class="store-chip">${item.preferred_store || 'Walmart'} Verified</span>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    } else {
+      grid.innerHTML = "<p>No tracked items found in watchlist.</p>";
+    }
+  } catch (err) {
+    grid.innerHTML = `<p style="color:red;">Error loading watchlist: ${err.message}</p>`;
+  }
+}
+
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+
+function bubble(who) {
+  const m = el("div", "msg " + who);
+  const b = el("div", "bubble");
+  m.appendChild(b); log.appendChild(m); log.scrollTop = log.scrollHeight;
+  return b;
+}
+
+// Bound string helper
+function boundStr(v) {
+  if (v == null) return "";
+  if (typeof v === "string") return v;
+  if (typeof v.literalString === "string") return v.literalString;
+  return "";
+}
+
+function childIds(props) {
+  const ids = [];
+  if (props && typeof props.child === "string") ids.push(props.child);
+  const ch = props && props.children;
+  if (ch && Array.isArray(ch.explicitList)) for (const c of ch.explicitList) if (typeof c === "string") ids.push(c);
+  return ids;
+}
+
+function iconName(n) { return String(n || "").replace(/([a-z0-9])([A-Z])/g, "$1_$2").replace(/\s+/g, "_").toLowerCase(); }
+
+function buildNode(id, comps, seen) {
+  if (!id || seen.has(id)) return null;
+  seen.add(id);
+  const spec = comps[id];
+  if (!spec || typeof spec !== "object") return null;
+  const type = Object.keys(spec)[0];
+  const props = spec[type] || {};
+  const kids = () => childIds(props).map(cid => buildNode(cid, comps, seen)).filter(Boolean);
+
+  if (type === "Card") { const e = el("div", "a2card"); kids().forEach(k => e.appendChild(k)); return e; }
+  if (type === "Column") { const e = el("div", "a2col"); kids().forEach(k => e.appendChild(k)); return e; }
+  if (type === "Row") { const e = el("div", "a2row"); kids().forEach(k => e.appendChild(k)); return e; }
+  if (type === "Text") {
+    const e = el("p", "a2text");
+    if (props.usageHint) e.classList.add("a2-" + String(props.usageHint).toLowerCase());
+    e.textContent = boundStr(props.text);
+    return e;
+  }
+  if (type === "Divider") return el("hr", "a2divider");
+  if (type === "Image") {
+    const url = boundStr(props.url);
+    if (/^https?:\/\//i.test(url)) {
+      const img = el("img", "a2img");
+      img.src = url;
+      return img;
+    }
+    return null;
+  }
+  return null;
+}
+
+function renderCard(msgData) {
+  const surface = msgData && (msgData.surfaceUpdate || msgData.beginRendering);
+  const comps = surface && surface.components;
+  const rootId = surface && surface.rootComponentId;
+  if (!comps || !rootId) return null;
+
+  const compsDict = {};
+  for (const c of comps) if (c && c.id) compsDict[c.id] = c.component || c;
+  return buildNode(rootId, compsDict, new Set());
+}
+
+function renderReply(parts) {
+  const b = bubble("bot");
+  let renderedAny = false;
+
+  for (const part of parts) {
+    if (part.kind === "text" && part.text) {
+      if (renderedAny) { const extra = bubble("bot"); extra.textContent = part.text; }
+      else { b.textContent = part.text; renderedAny = true; }
+    } else if (part.kind === "a2ui" && part.data) {
+      const cardNode = renderCard(part.data);
+      if (cardNode) {
+        b.classList.add("rich");
+        b.appendChild(cardNode);
+        renderedAny = true;
+      }
+    }
+  }
+  if (!renderedAny) b.textContent = "(The agent didn't return a reply.)";
+}
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = "";
+  bubble("user").textContent = text;
+
+  const thinking = bubble("bot");
+  thinking.textContent = "Thinking...";
+
+  try {
+    const res = await fetch("/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: text })
+    });
+    const data = await res.json();
+    thinking.remove();
+    renderReply(data.parts || []);
+  } catch (err) {
+    thinking.textContent = "Error: " + err.message;
+  }
+});
+</script>
+</body>
+</html>
