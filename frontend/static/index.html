@@ -243,13 +243,6 @@ const FALLBACK_IMAGES = {
   "pixel": "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=500&q=80"
 };
 
-const DEFAULT_STORE_URLS = {
-  "walmart": "https://www.walmart.com",
-  "amazon": "https://www.amazon.com",
-  "best buy": "https://www.bestbuy.com",
-  "target": "https://www.target.com"
-};
-
 function getFallbackImage(name) {
   const n = String(name || "").toLowerCase();
   for (const key in FALLBACK_IMAGES) {
@@ -261,10 +254,11 @@ function getFallbackImage(name) {
 function getStoreUrl(item) {
   if (item.store_url) return item.store_url;
   const store = String(item.preferred_store || "").toLowerCase();
-  for (const key in DEFAULT_STORE_URLS) {
-    if (store.includes(key)) return DEFAULT_STORE_URLS[key];
-  }
-  return "https://www.walmart.com";
+  const query = encodeURIComponent(item.product_name || "product");
+  if (store.includes("amazon")) return `https://www.amazon.com/s?k=${query}`;
+  if (store.includes("best buy")) return `https://www.bestbuy.com/site/searchpage.jsp?st=${query}`;
+  if (store.includes("target")) return `https://www.target.com/s?searchTerm=${query}`;
+  return `https://www.walmart.com/search?q=${query}`;
 }
 
 async function loadWatchlist() {
@@ -301,7 +295,7 @@ async function loadWatchlist() {
               <span class="store-chip">${item.preferred_store || 'Walmart'} Verified</span>
             </div>
             <a href="${targetUrl}" target="_blank" rel="noopener noreferrer" class="visit-btn">
-              <span>🔗 Visit ${item.preferred_store || 'Store'} Website</span>
+              <span>🛒 View Product on ${item.preferred_store || 'Store'}</span>
             </a>
           </div>
         `;
