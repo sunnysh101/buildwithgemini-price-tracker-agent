@@ -24,6 +24,7 @@ Run:
   python main.py                 # -> http://localhost:8080
 """
 
+import glob
 import os
 import uuid
 
@@ -42,7 +43,7 @@ from a2a.types import (
     TransportProtocol,
 )
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from google.cloud import firestore
 
@@ -130,6 +131,14 @@ async def get_watchlist():
         return JSONResponse({"status": "success", "watchlist": items})
     except Exception as e:
         return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
+
+
+@app.get("/api/images/{filename}")
+async def get_image(filename: str):
+    matches = glob.glob(f"/home/user/.gemini/antigravity-cli/brain/f964e87c-6518-4ec3-aca9-cfd45dc1c937/*{filename}*")
+    if matches:
+        return FileResponse(matches[0], media_type="image/png")
+    return JSONResponse({"status": "not_found"}, status_code=404)
 
 
 @app.post("/chat")
