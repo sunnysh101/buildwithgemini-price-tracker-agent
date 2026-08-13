@@ -80,14 +80,14 @@
   }
   .tiles-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
     gap: 1.2rem;
   }
   .product-tile {
     background: var(--card-bg);
     border: 1px solid var(--border);
     border-radius: 12px;
-    padding: 1rem;
+    padding: 1.1rem;
     box-shadow: 0 2px 6px rgba(0,0,0,0.04);
     display: flex;
     flex-direction: column;
@@ -115,8 +115,8 @@
     object-fit: cover;
   }
   .tile-title { font-weight: 700; font-size: 1rem; margin-bottom: 0.4rem; line-height: 1.3; }
-  .tile-meta { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.8rem; }
-  .tile-footer { display: flex; justify-content: space-between; align-items: center; margin-top: auto; }
+  .tile-meta { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.8rem; line-height: 1.4; }
+  .tile-footer { display: flex; justify-content: space-between; align-items: center; margin-top: auto; margin-bottom: 0.8rem; }
   .price-badge { font-size: 1.2rem; font-weight: 800; color: var(--success); }
   .store-chip {
     background: #e8f0fe;
@@ -126,6 +126,23 @@
     padding: 0.3rem 0.6rem;
     border-radius: 12px;
   }
+  .visit-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    width: 100%;
+    padding: 0.6rem;
+    background: var(--accent);
+    color: #ffffff;
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 700;
+    border-radius: 8px;
+    transition: background 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+  .visit-btn:hover { background: var(--accent-dark); color: #ffffff; }
 
   /* Right Panel: AI Chat Assistant */
   .chat-panel {
@@ -226,12 +243,28 @@ const FALLBACK_IMAGES = {
   "pixel": "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=500&q=80"
 };
 
+const DEFAULT_STORE_URLS = {
+  "walmart": "https://www.walmart.com",
+  "amazon": "https://www.amazon.com",
+  "best buy": "https://www.bestbuy.com",
+  "target": "https://www.target.com"
+};
+
 function getFallbackImage(name) {
   const n = String(name || "").toLowerCase();
   for (const key in FALLBACK_IMAGES) {
     if (n.includes(key)) return FALLBACK_IMAGES[key];
   }
   return "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&q=80";
+}
+
+function getStoreUrl(item) {
+  if (item.store_url) return item.store_url;
+  const store = String(item.preferred_store || "").toLowerCase();
+  for (const key in DEFAULT_STORE_URLS) {
+    if (store.includes(key)) return DEFAULT_STORE_URLS[key];
+  }
+  return "https://www.walmart.com";
 }
 
 async function loadWatchlist() {
@@ -249,6 +282,7 @@ async function loadWatchlist() {
 
         const fallback = getFallbackImage(item.product_name);
         const imgSrc = item.badge_url || fallback;
+        const targetUrl = getStoreUrl(item);
 
         card.innerHTML = `
           <div>
@@ -261,9 +295,14 @@ async function loadWatchlist() {
               Trust Rating: ⭐️ ${item.min_trust_score || 4.0}/5.0
             </div>
           </div>
-          <div class="tile-footer">
-            <div class="price-badge">$${parseFloat(item.target_price || 0).toFixed(2)}</div>
-            <span class="store-chip">${item.preferred_store || 'Walmart'} Verified</span>
+          <div>
+            <div class="tile-footer">
+              <div class="price-badge">$${parseFloat(item.target_price || 0).toFixed(2)}</div>
+              <span class="store-chip">${item.preferred_store || 'Walmart'} Verified</span>
+            </div>
+            <a href="${targetUrl}" target="_blank" rel="noopener noreferrer" class="visit-btn">
+              <span>🔗 Visit ${item.preferred_store || 'Store'} Website</span>
+            </a>
           </div>
         `;
         grid.appendChild(card);
@@ -381,14 +420,12 @@ form.addEventListener("submit", async (e) => {
     const data = await res.json();
     thinking.remove();
     renderReply(data.parts || []);
-    // Auto reload tiles after chat interactions
     setTimeout(loadWatchlist, 1000);
   } catch (err) {
     thinking.textContent = "Error: " + err.message;
   }
 });
 
-// Load product image tiles immediately on page load!
 document.addEventListener("DOMContentLoaded", () => {
   loadWatchlist();
   bubble("bot").textContent = "Hello! I am your Smart Price Tracker & Coupon Stacker Assistant. Ask me to find deals, stack coupons, or track new products!";
